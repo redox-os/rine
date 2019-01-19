@@ -1,0 +1,28 @@
+[[package]]
+name = "libc"
+version = "0.2.47"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "redox_syscall"
+version = "0.1.50"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "rine"
+version = "0.1.0"
+dependencies = [
+ "libc 0.2.47 (registry+https://github.com/rust-lang/crates.io-index)",
+ "redox_syscall 0.1.50 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sc 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "sc"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[metadata]
+"checksum libc 0.2.47 (registry+https://github.com/rust-lang/crates.io-index)" = "48450664a984b25d5b479554c29cc04e3150c97aa4c01da5604a2d4ed9151476"
+"checksum redox_syscall 0.1.50 (registry+https://github.com/rust-lang/crates.io-index)" = "52ee9a534dc1301776eff45b4fa92d2c39b1d8c3d3357e6eb593e0d795506fc2"
+"checksum sc 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "4ebbb026ba4a707c25caec2db5ef59ad8b41f7ad77cad06257e06229c891f376"
