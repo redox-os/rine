@@ -64,6 +64,14 @@ fn convert_path(rpath: &[u8]) -> Vec<u8> {
     lpath
 }
 
+fn convert_pipe(lpipe: &[libc::c_int]) -> Vec<usize> {
+    let mut rpipe = Vec::with_capacity(lpipe.len());
+    for fd in lpipe.iter() {
+        rpipe.push(*fd as usize);
+    }
+    rpipe
+}
+
 fn convert_stat(lstat: &[u8]) -> Stat {
     let stat = unsafe { &*(lstat.as_ptr() as *const libc::stat) };
 
@@ -189,6 +197,37 @@ pub unsafe fn handle(pid: libc::pid_t) -> result::Result<(), i32> {
             p.set_b(b);
             p.set_c(c);
             p.set_d(d);
+        },
+        SYS_PIPE2 => {
+            // Save the current stack page
+            let stack_addr = (p.regs.rsp as usize) & !(PAGE_SIZE - 1);
+            let stack_page = p.pread(stack_addr, PAGE_SIZE).unwrap();
+
+            // Convert open flags
+            let (oflag, _mode) = convert_open(c);
+
+            // Set up the new arguments
+            p.set_nr(nr::PIPE2);
+            p.set_b(stack_addr as u64);
+            p.set_c(oflag);
+            p.set();
+
+            // Call the system call
+            p.step()?;
+
+            // Read the pipe fds
+            let lpipe = p.read_type(stack_addr as *const libc::c_int, 2).unwrap();
+            let rpipe = convert_pipe(&lpipe);
+
+            // Restore the stack page
+            p.pwrite(stack_addr, &stack_page).unwrap();
+
+            // Write the pipe fds
+            p.write_type(b as *mut usize, &rpipe).unwrap();
+
+            // Restore the old arguments
+            p.set_b(b);
+            p.set_c(c);
         },
         SYS_READ => {
             p.set_nr(nr::READ);

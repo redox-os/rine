@@ -106,12 +106,12 @@ impl Process {
 
         let local_iov = libc::iovec {
             iov_base: buffer.as_mut_ptr() as *mut libc::c_void,
-            iov_len: buffer.len(),
+            iov_len: buffer.len() * mem::size_of::<T>(),
         };
 
         let remote_iov = libc::iovec {
             iov_base: address as *mut libc::c_void,
-            iov_len: buffer.len(),
+            iov_len: buffer.len() * mem::size_of::<T>(),
         };
 
         libc::process_vm_readv(
@@ -126,19 +126,15 @@ impl Process {
         Ok(buffer)
     }
 
-    pub unsafe fn pread(&mut self, address: usize, length: usize) -> syscall::Result<Vec<u8>> {
-        self.read_type(address as *const u8, length)
-    }
-
-    pub unsafe fn pwrite(&mut self, address: usize, buffer: &[u8]) -> syscall::Result<()> {
+    pub unsafe fn write_type<T>(&mut self, address: *mut T, buffer: &[T]) -> syscall::Result<()> {
         let local_iov = libc::iovec {
             iov_base: buffer.as_ptr() as *mut libc::c_void,
-            iov_len: buffer.len(),
+            iov_len: buffer.len() * mem::size_of::<T>(),
         };
 
         let remote_iov = libc::iovec {
             iov_base: address as *mut libc::c_void,
-            iov_len: buffer.len(),
+            iov_len: buffer.len() * mem::size_of::<T>(),
         };
 
         libc::process_vm_writev(
@@ -151,5 +147,13 @@ impl Process {
         );
 
         Ok(())
+    }
+
+    pub unsafe fn pread(&mut self, address: usize, length: usize) -> syscall::Result<Vec<u8>> {
+        self.read_type(address as *const u8, length)
+    }
+
+    pub unsafe fn pwrite(&mut self, address: usize, buffer: &[u8]) -> syscall::Result<()> {
+        self.write_type(address as *mut u8, buffer)
     }
 }
