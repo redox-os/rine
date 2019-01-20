@@ -1,69 +1,10 @@
-use std::{process, ptr, slice};
+use std::mem;
 use libc;
-use libc::{c_char, c_int, c_void, off_t, pid_t};
+use libc::{PTRACE_GETREGS, PTRACE_SETREGS, PTRACE_SYSCALL};
+use libc::{pid_t, user_regs_struct};
+use libc::ptrace;
+use sc;
 use syscall::*;
-
-fn exit(status: usize) -> Result<usize> {
-    process::exit(status as i32);
-}
-
-fn write(fd: usize, buffer: &[u8]) -> Result<usize> {
-    Error::demux(unsafe {
-        syscall!(WRITE, fd, buffer.as_ptr(), buffer.len())
-    })
-}
-
-struct Mapping {
-    address: usize,
-    length: usize,
-    page_address: usize,
-    page_length: usize,
-}
-
-impl Mapping {
-    unsafe fn new(fd: c_int, address: usize, length: usize, write: bool) -> Result<Mapping> {
-        let prot = if write {
-            libc::PROT_READ | libc::PROT_WRITE
-        } else {
-            libc::PROT_READ
-        };
-
-        let flags = libc::MAP_SHARED;
-
-        let page_size = 4096;
-        // Align address to page size
-        let page_address = address & !(page_size - 1);
-        // Calculate offset from page aligned address to address
-        let page_offset = address - page_address;
-        // Calculate length to the nearest page
-        let page_length = ((length + page_offset + page_size - 1)/page_size) * page_size;
-
-        let mapping = libc::mmap(ptr::null_mut(), page_length, prot, flags, fd, page_address as off_t);
-        if mapping == libc::MAP_FAILED {
-            libc::perror(b"mmap\0".as_ptr() as *const c_char);
-            Err(Error::new(EINVAL))
-        } else {
-            Ok(Mapping {
-                address: mapping as usize + page_offset,
-                length: length,
-                page_address: mapping as usize,
-                page_length: page_length
-            })
-        }
-    }
-
-    unsafe fn as_slice(&self) -> &[u8] {
-        slice::from_raw_parts(self.address as *const u8, self.length)
-    }
-}
-
-impl Drop for Mapping {
-    fn drop(&mut self) {
-        unsafe {
-            libc::munmap(self.page_address as *mut c_void, self.page_length);
-        }
-    }
-}
 
 unsafe fn process_read(pid: pid_t, address: usize, length: usize) -> Vec<u8> {
     let mut buffer = vec![0; length];
@@ -111,28 +52,101 @@ unsafe fn process_write(pid: pid_t, address: usize, buffer: &[u8]) {
     );
 }
 
-pub unsafe fn handle(pid: pid_t, mem: c_int, a: usize, b: usize, c: usize, d: usize, e: usize, f: usize) -> usize {
-    let inner = || -> Result<usize> {
-        match a {
-            SYS_WRITE => {
-                println!("write({}, {:#x}, {})", b, c, d);
-                //let mapping = Mapping::new(mem, c, d, false)?;
-                //println!("Map {:#x}:{}", mapping.address, mapping.length);
-                write(b, &process_read(pid, c, d))
-            },
-            SYS_EXIT => {
-                println!("exit({})", b);
-                exit(b)
-            },
-            _ => {
-                println!("Unknown: {:#x}", a);
-                Err(Error::new(ENOSYS))
-            }
+unsafe fn ptrace_syscall(pid: pid_t) -> Option<i32> {
+    loop {
+        if ptrace(PTRACE_SYSCALL, pid, 0, 0) < 0 {
+            libc::perror(b"PTRACE_SYSCALL\0".as_ptr() as *const _);
+            return Some(1);
         }
-    };
 
-    let res = inner();
+        let mut status = 0;
+        libc::waitpid(pid, &mut status, 0);
+        trace!("waitpid {:#x}", status);
+        if libc::WIFSTOPPED(status) && libc::WSTOPSIG(status) == (0x80 | libc::SIGTRAP) {
+            trace!("  SYSCALL");
+            return None;
+        } else if libc::WIFSTOPPED(status) {
+            let signal = libc::WSTOPSIG(status);
+            trace!("  STOPPED {}", signal);
+        } else if libc::WIFSIGNALED(status) {
+            let signal = libc::WTERMSIG(status);
+            trace!("  SIGNALED {}", signal);
+        } else if libc::WIFEXITED(status) {
+            let exit_status = libc::WEXITSTATUS(status);
+            trace!("  EXIT {}", exit_status);
+            return Some(exit_status);
+        }
+    }
+}
 
-    println!("= {:?}", res);
-    Error::mux(res)
+pub unsafe fn handle(pid: pid_t) -> Option<i32> {
+    // Redox convention
+    // rax, rbx, rcx, rdx, rsi, rdi
+    // Return value in rax
+    // No clobbers
+
+    // Linux convention
+    // rax, rdi, rsi, rdx, r10, r8, r9
+    // Return value in rax
+    // Clobbers rcx, r11
+
+    macro_rules! step {
+        () => (if let Some(status) = ptrace_syscall(pid) {
+            return Some(status);
+        });
+    }
+
+    let mut regs: user_regs_struct = mem::zeroed();
+    macro_rules! get {
+        () => (if ptrace(PTRACE_GETREGS, pid, 0, &mut regs) < 0 {
+            libc::perror(b"PTRACE_GETREGS\0".as_ptr() as *const _);
+        });
+    }
+    macro_rules! set {
+        () => (if ptrace(PTRACE_SETREGS, pid, 0, &regs) < 0 {
+            libc::perror(b"PTRACE_SETREGS\0".as_ptr() as *const _);
+        });
+    }
+
+    step!();
+    get!();
+
+    let (a, b, c, d, e, f) = (
+        regs.orig_rax,
+        regs.rdi,
+        regs.rsi,
+        regs.rdx,
+        regs.r10,
+        regs.r8
+    );
+
+    debug!("{:#x}({:#x}, {:#x}, {:#x}, {:#x}, {:#x})", a, b, c, d, e, f);
+
+    match a as usize {
+        SYS_GETPID => {
+            regs.orig_rax = sc::nr::GETPID as u64;
+            set!();
+            step!();
+        },
+        SYS_WRITE => {
+            regs.orig_rax = sc::nr::WRITE as u64;
+            set!();
+            step!();
+        },
+        SYS_EXIT => {
+            regs.orig_rax = sc::nr::EXIT as u64;
+            set!();
+            step!();
+        },
+        _ => {
+            step!();
+        }
+    }
+
+    get!();
+
+    let res = Error::demux(regs.rax as usize);
+    debug!("{:#x}({:#x}, {:#x}, {:#x}, {:#x}, {:#x}) = {:?}", a, b, c, d, e, f, res);
+
+    None
 }
