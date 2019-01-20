@@ -5,8 +5,10 @@
 
 int main(int argc, char ** argv) {
     for(int i = 0; i < argc; i++) {
-        printf("%d: %s\n", i, argv[i]);
+        printf("Arg %d: %s\n", i, argv[i]);
     }
+
+    printf("PID: %d\n", getpid());
 
     int fd = open("README.md", O_RDONLY);
     if (fd < 0) {
@@ -16,24 +18,24 @@ int main(int argc, char ** argv) {
 
     printf("open %d\n", fd);
 
-    struct stat buf;
-    if(fstat(fd, &buf) < 0) {
+    struct stat statbuf;
+    if(fstat(fd, &statbuf) < 0) {
         perror("fstat");
         return 1;
     }
 
-    printf("dev: %d\n", buf.st_dev);
-    printf("ino: %d\n", buf.st_ino);
-    printf("mode: %d\n", buf.st_mode);
-    printf("nlink: %d\n", buf.st_nlink);
-    printf("uid: %d\n", buf.st_uid);
-    printf("gid: %d\n", buf.st_gid);
-    printf("size: %d\n", buf.st_size);
-    printf("blksize: %d\n", buf.st_blksize);
-    printf("blocks: %d\n", buf.st_blocks);
-    printf("mtime: %d\n", buf.st_mtime);
-    printf("atime: %d\n", buf.st_atime);
-    printf("ctime: %d\n", buf.st_ctime);
+    printf("stat dev: %d\n", statbuf.st_dev);
+    printf("stat ino: %d\n", statbuf.st_ino);
+    printf("stat mode: %d\n", statbuf.st_mode);
+    printf("stat nlink: %d\n", statbuf.st_nlink);
+    printf("stat uid: %d\n", statbuf.st_uid);
+    printf("stat gid: %d\n", statbuf.st_gid);
+    printf("stat size: %d\n", statbuf.st_size);
+    printf("stat blksize: %d\n", statbuf.st_blksize);
+    printf("stat blocks: %d\n", statbuf.st_blocks);
+    printf("stat mtime: %d\n", statbuf.st_mtime);
+    printf("stat atime: %d\n", statbuf.st_atime);
+    printf("stat ctime: %d\n", statbuf.st_ctime);
 
     while (1) {
         char buf[256] = { 0 };
@@ -49,6 +51,24 @@ int main(int argc, char ** argv) {
     }
 
     close(fd);
+
+    int rand = open("rand:", O_RDONLY);
+    if (rand < 0) {
+        perror("open rand");
+        return 1;
+    }
+
+    printf("open rand %d\n", rand);
+
+    char buf[1] = {0};
+    if (read(rand, buf, 1) < 0) {
+        perror("read rand");
+        return 1;
+    }
+
+    printf("read rand: %d\n", (int)buf[0]);
+
+    close(rand);
 
     return 0;
 }

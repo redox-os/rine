@@ -1,6 +1,6 @@
 use libc;
 use sc::nr;
-use std::{mem, result};
+use std::{mem, result, str};
 use syscall::*;
 
 mod debug;
@@ -37,6 +37,31 @@ fn convert_open(flags: u64) -> (u64, u64) {
     }
 
     (lflags as u64, flags & 0xFFFF)
+}
+
+fn convert_path(rpath: &[u8]) -> Vec<u8> {
+    let mut lpath = if rpath.contains(&b':') {
+        let mut parts = rpath.splitn(2, |b| b == &b':');
+        let scheme = parts.next().unwrap();
+        let path = parts.next().unwrap();
+        match scheme {
+            b"null" => b"/dev/null".to_vec(),
+            b"rand" => b"/dev/urandom".to_vec(),
+            b"zero" => b"/dev/zero".to_vec(),
+            _ => {
+                println!(
+                    "TODO: {}:{}",
+                    unsafe { str::from_utf8_unchecked(&scheme) },
+                    unsafe { str::from_utf8_unchecked(&path) }
+                );
+                rpath.to_vec()
+            }
+        }
+    } else {
+        rpath.to_vec()
+    };
+    lpath.push(0);
+    lpath
 }
 
 fn convert_stat(lstat: &[u8]) -> Stat {
@@ -130,10 +155,10 @@ pub unsafe fn handle(pid: libc::pid_t) -> result::Result<(), i32> {
         },
         SYS_OPEN => {
             // Convert the path into a C string
-            let mut path = p.pread(b as usize, c as usize).unwrap();
-            path.push(0);
+            let rpath = p.pread(b as usize, c as usize).unwrap();
+            let lpath = convert_path(&rpath);
 
-            if path.len() > PAGE_SIZE {
+            if lpath.len() > PAGE_SIZE {
                 panic!("path larger than PAGE_SIZE {}", PAGE_SIZE);
             }
 
@@ -142,7 +167,7 @@ pub unsafe fn handle(pid: libc::pid_t) -> result::Result<(), i32> {
             let stack_page = p.pread(stack_addr, PAGE_SIZE).unwrap();
 
             // Write the path to the stack
-            p.pwrite(stack_addr, &path).unwrap();
+            p.pwrite(stack_addr, &lpath).unwrap();
 
             // Convert the open flags
             let (oflag, mode) = convert_open(d);
