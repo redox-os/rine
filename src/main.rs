@@ -7,11 +7,7 @@ extern crate syscall;
 
 use std::{env, ffi, process, ptr};
 
-// Constants
-use libc::{
-    PTRACE_O_EXITKILL, PTRACE_O_TRACESYSGOOD, PTRACE_SETOPTIONS, PTRACE_TRACEME,
-    SIGSTOP
-};
+use libc::{PTRACE_O_EXITKILL, PTRACE_O_TRACESYSGOOD, PTRACE_SETOPTIONS, PTRACE_TRACEME};
 use libc::{c_char, pid_t};
 use libc::{execv, fork, ptrace};
 
