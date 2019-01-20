@@ -60,7 +60,10 @@ unsafe fn ptrace_syscall(pid: pid_t) -> Option<i32> {
         }
 
         let mut status = 0;
-        libc::waitpid(pid, &mut status, 0);
+        if libc::waitpid(pid, &mut status, 0) < 0 {
+            libc::perror(b"waitpid\0".as_ptr() as *const _);
+            return Some(1);
+        }
         trace!("waitpid {:#x}", status);
         if libc::WIFSTOPPED(status) && libc::WSTOPSIG(status) == (0x80 | libc::SIGTRAP) {
             trace!("  SYSCALL");
