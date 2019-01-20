@@ -130,8 +130,41 @@ pub unsafe fn handle(pid: libc::pid_t) -> result::Result<(), i32> {
             p.set();
             p.step()?;
         },
-        SYS_GETPID => {
-            p.set_nr(nr::GETPID);
+        SYS_CHDIR => {
+            //TODO
+            p.set_nr(!0);
+            p.set();
+            p.step()?;
+        },
+        SYS_CLOCK_GETTIME => {
+            //TODO
+            p.set_nr(!0);
+            p.set();
+            p.step()?;
+        },
+        SYS_CLOSE => {
+            p.set_nr(nr::CLOSE);
+            p.set();
+            p.step()?;
+        },
+        SYS_EXIT => {
+            p.set_nr(nr::EXIT);
+            p.set();
+            p.step()?;
+        },
+        SYS_FCHMOD => {
+            p.set_nr(nr::FCHMOD);
+            p.set();
+            p.step()?;
+        },
+        SYS_FCHOWN => {
+            p.set_nr(nr::FCHOWN);
+            p.set();
+            p.step()?;
+        },
+        SYS_FCNTL => {
+            //TODO
+            p.set_nr(!0);
             p.set();
             p.step()?;
         },
@@ -160,6 +193,84 @@ pub unsafe fn handle(pid: libc::pid_t) -> result::Result<(), i32> {
 
             // Restore the old arguments
             p.set_c(c);
+        },
+        SYS_FSYNC => {
+            p.set_nr(nr::FSYNC);
+            p.set();
+            p.step()?;
+        },
+        SYS_FTRUNCATE => {
+            p.set_nr(nr::FTRUNCATE);
+            p.set();
+            p.step()?;
+        },
+        SYS_FUTEX => {
+            //TODO
+            p.set_nr(!0);
+            p.set();
+            p.step()?;
+        },
+        SYS_FUTIMENS => {
+            //TODO
+            p.set_nr(!0);
+            p.set();
+            p.step()?;
+        },
+        SYS_GETCWD => {
+            //TODO
+            p.set_nr(!0);
+            p.set();
+            p.step()?;
+        },
+        SYS_GETEGID => {
+            p.set_nr(nr::GETEGID);
+            p.set();
+            p.step()?;
+        },
+        SYS_GETEUID => {
+            p.set_nr(nr::GETEUID);
+            p.set();
+            p.step()?;
+        },
+        SYS_GETGID => {
+            p.set_nr(nr::GETGID);
+            p.set();
+            p.step()?;
+        },
+        SYS_GETPGID => {
+            p.set_nr(nr::GETPGID);
+            p.set();
+            p.step()?;
+        },
+        SYS_GETPID => {
+            p.set_nr(nr::GETPID);
+            p.set();
+            p.step()?;
+        },
+        SYS_GETPPID => {
+            p.set_nr(nr::GETPPID);
+            p.set();
+            p.step()?;
+        },
+        SYS_GETUID => {
+            p.set_nr(nr::GETUID);
+            p.set();
+            p.step()?;
+        },
+        SYS_IOPL => {
+            p.set_nr(nr::IOPL);
+            p.set();
+            p.step()?;
+        },
+        SYS_KILL => {
+            p.set_nr(nr::KILL);
+            p.set();
+            p.step()?;
+        },
+        SYS_LSEEK => {
+            p.set_nr(nr::LSEEK);
+            p.set();
+            p.step()?;
         },
         SYS_OPEN => {
             // Convert the path into a C string
@@ -234,13 +345,33 @@ pub unsafe fn handle(pid: libc::pid_t) -> result::Result<(), i32> {
             p.set();
             p.step()?;
         },
+        SYS_SETPGID => {
+            p.set_nr(nr::SETPGID);
+            p.set();
+            p.step()?;
+        },
+        SYS_SETREGID => {
+            p.set_nr(nr::SETREGID);
+            p.set();
+            p.step()?;
+        },
+        SYS_SETREUID => {
+            p.set_nr(nr::SETREUID);
+            p.set();
+            p.step()?;
+        },
+        SYS_UMASK => {
+            p.set_nr(nr::UMASK);
+            p.set();
+            p.step()?;
+        },
         SYS_WRITE => {
             p.set_nr(nr::WRITE);
             p.set();
             p.step()?;
         },
-        SYS_EXIT => {
-            p.set_nr(nr::EXIT);
+        SYS_YIELD => {
+            p.set_nr(nr::SCHED_YIELD);
             p.set();
             p.step()?;
         },

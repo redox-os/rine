@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <sched.h>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -51,6 +52,16 @@ int main(int argc, char ** argv) {
     }
 
     close(fd);
+
+    if (sched_yield() < 0) {
+        perror("sched_yield");
+        return 1;
+    }
+
+    if (sleep(1) < 0) {
+        perror("sleep");
+        return 1;
+    }
 
     int rand = open("rand:", O_RDONLY);
     if (rand < 0) {
