@@ -4,7 +4,7 @@ use syscall;
 
 pub struct Process{
     pid: libc::pid_t,
-    regs: libc::user_regs_struct
+    pub regs: libc::user_regs_struct
 }
 
 impl Process {
@@ -58,10 +58,6 @@ impl Process {
         }
     }
 
-    pub fn set_nr(&mut self, nr: usize) {
-        self.regs.orig_rax = nr as u64;
-    }
-
     pub fn args(&self) -> (u64, u64, u64, u64, u64, u64) {
         (
             self.regs.orig_rax,
@@ -71,6 +67,34 @@ impl Process {
             self.regs.r10,
             self.regs.r8
         )
+    }
+
+    pub fn set_nr(&mut self, nr: usize) {
+        self.set_a(nr as u64);
+    }
+
+    pub fn set_a(&mut self, value: u64) {
+        self.regs.orig_rax = value;
+    }
+
+    pub fn set_b(&mut self, value: u64) {
+        self.regs.rdi = value;
+    }
+
+    pub fn set_c(&mut self, value: u64) {
+        self.regs.rsi = value;
+    }
+
+    pub fn set_d(&mut self, value: u64) {
+        self.regs.rdx = value;
+    }
+
+    pub fn set_e(&mut self, value: u64) {
+        self.regs.r10 = value;
+    }
+
+    pub fn set_f(&mut self, value: u64) {
+        self.regs.r8 = value;
     }
 
     pub fn result(&self) -> syscall::Result<usize> {
