@@ -1,3 +1,5 @@
+#![cfg(target_os = "redox")]
+
 extern crate syscall;
 
 fn main() {

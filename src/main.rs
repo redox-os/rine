@@ -33,6 +33,7 @@ unsafe fn parent(pid: pid_t) {
             libc::perror(b"waitpid\0".as_ptr() as *const _);
             process::exit(1);
         }
+
         trace!("waitpid {:#x}", status);
         if libc::WIFSTOPPED(status) && libc::WSTOPSIG(status) == (0x80 | libc::SIGTRAP) {
             trace!("  SYSCALL");
@@ -53,7 +54,7 @@ unsafe fn parent(pid: pid_t) {
     ptrace(PTRACE_SETOPTIONS, pid, 0, PTRACE_O_EXITKILL | PTRACE_O_TRACESYSGOOD);
 
     loop {
-        if let Some(status) = handle(pid) {
+        if let Err(status) = handle(pid) {
             println!("Process exited with status {}", status);
             process::exit(status);
         }

@@ -9,4 +9,6 @@ env_logger = "0.6"
 libc = "0.2"
 log = "0.4"
 redox_syscall = { path = "syscall" }
+
+[target.'cfg(target_os = "linux")'.dependencies]
 sc = "0.2"

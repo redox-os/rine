@@ -6,12 +6,20 @@ that runs on Linux. But hey, if it makes you feel better:
 
 ## Trying it out
 
-First, build the example that uses Redox system calls:
+First, set up a Redox environment by running this inside of a
+[redox](https://gitlab.redox-os.org/redox-os/redox) repository:
 ```
-cargo build --example simple
+make env
 ```
 
-Next, run the example with `rine`:
+Next, build the example that uses Redox system calls:
 ```
-cargo run target/debug/examples/simple
+xargo build --target x86_64-unknown-redox --example simple
 ```
+
+Finally, run the example with `rine`:
+```
+cargo run target/x86_64-unknown-redox/debug/examples/simple
+```
+
+The `example.sh` script will do all of this for you.
